@@ -4,7 +4,8 @@ admin.initializeApp();
 
 exports.sendMessageNotification = functions.database.ref('USERS/{userID}/conversations/messageList/{senderID}/messages/{messageID}').onWrite((change, context) => {
   var receiver = context.params.userID
-  if (receiver == context.params.senderID) {
+  var sender = context.params.senderID
+  if (receiver == sender) {
     return 0;
   }
 
@@ -15,6 +16,12 @@ exports.sendMessageNotification = functions.database.ref('USERS/{userID}/convers
     const instanceId = results[0].val();
 
     const payload = {
+      data: {
+        title: messageData.name,
+        body: messageData.text,
+        sender: sender,
+        date: messageData.dateTime
+      },
       notification: {
         title: messageData.name,
         body: messageData.text
