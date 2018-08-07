@@ -119,14 +119,22 @@ exports.fixCity = functions.database.ref('USERS/{userID}/city').onWrite((change,
   var city = change.after.val()
   console.log("Got city " + city)
 
+  city = city.trim()
   if (city.includes(',')) {
     console.log("Removing state")
-    return change.after.ref.set(city.substring(0, city.indexOf(',')))
+    city = city.substring(0, city.indexOf(','))
   }
-  else if (state.includes('.')) {
+  if (city.includes('.')) {
     console.log("Removing periods")
-    return change.after.ref.set(city.split('.').join(''))
+    city = city.split('.').join('')
   }
+
+  city = city.trim()
+  if(city != change.after.val()) {
+    console.log('City updated from ' + change.after.val() + ' to ' + city)
+    return change.after.ref.set(city)
+  }
+  console.log('City ' + city + ' passes')
   return 0
 })
 
@@ -134,16 +142,25 @@ exports.fixCity = functions.database.ref('USERS/{userID}/city').onWrite((change,
 exports.fixState = functions.database.ref('USERS/{userID}/stateCountry').onWrite((change, context) => {
   var userID = context.params.userID
   var state = change.after.val()
-  console.log("Got state " + state)
 
+  state = state.trim()
   if(state.length > 2) {
     for(key in states) {
       if(states[key].toUpperCase() == state.toUpperCase()) {
-        console.log("New state " + key)
-        return change.after.ref.set(key)
+        state = key
       }
     }
   }
+  else {
+    state = state.toUpperCase()
+  }
+
+  state = state.trim()
+  if(state != change.after.val()) {
+    console.log('State updated from ' + change.after.val() + ' to ' + state)
+    return change.after.ref.set(state)
+  }
+  console.log('State ' + state + ' passes')
   return 0
 })
 
