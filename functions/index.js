@@ -7,14 +7,14 @@ admin.initializeApp();
 exports.sendMessageNotification = functions.database.ref('USERS/{userID}/conversations/messageList/{senderID}/messages/{messageID}').onWrite((change, context) => {
   var userID = context.params.userID
   var mateID = context.params.senderID
-  var messageData = change.after.val()  
+  var messageData = change.after.val()
   console.log(userID + ' from convo with ' + mateID)
-  
-  if(messageData == null) {
+
+  if (messageData == null) {
     console.log('Bad message update')
     return 0
   }
-  if(messageData.sender_id == userID) {
+  if (messageData.sender_id == userID) {
     console.log('Not sending to sender')
     return 0
   }
@@ -23,7 +23,7 @@ exports.sendMessageNotification = functions.database.ref('USERS/{userID}/convers
   return Promise.all([getUserPromise]).then(results => {
     const user = results[0].val()
 
-    if(user.emailNotifications) {
+    if (user.emailNotifications) {
       const payload = {
         data: {
           title: messageData.name,
@@ -51,12 +51,108 @@ exports.sendMessageNotification = functions.database.ref('USERS/{userID}/convers
   })
 })
 
+states = {
+  "AL": "Alabama",
+  "AK": "Alaska",
+  "AS": "American Samoa",
+  "AZ": "Arizona",
+  "AR": "Arkansas",
+  "CA": "California",
+  "CO": "Colorado",
+  "CT": "Connecticut",
+  "DE": "Delaware",
+  "DC": "District Of Columbia",
+  "FM": "Federated States Of Micronesia",
+  "FL": "Florida",
+  "GA": "Georgia",
+  "GU": "Guam",
+  "HI": "Hawaii",
+  "ID": "Idaho",
+  "IL": "Illinois",
+  "IN": "Indiana",
+  "IA": "Iowa",
+  "KS": "Kansas",
+  "KY": "Kentucky",
+  "LA": "Louisiana",
+  "ME": "Maine",
+  "MH": "Marshall Islands",
+  "MD": "Maryland",
+  "MA": "Massachusetts",
+  "MI": "Michigan",
+  "MN": "Minnesota",
+  "MS": "Mississippi",
+  "MO": "Missouri",
+  "MT": "Montana",
+  "NE": "Nebraska",
+  "NV": "Nevada",
+  "NH": "New Hampshire",
+  "NJ": "New Jersey",
+  "NM": "New Mexico",
+  "NY": "New York",
+  "NC": "North Carolina",
+  "ND": "North Dakota",
+  "MP": "Northern Mariana Islands",
+  "OH": "Ohio",
+  "OK": "Oklahoma",
+  "OR": "Oregon",
+  "PW": "Palau",
+  "PA": "Pennsylvania",
+  "PR": "Puerto Rico",
+  "RI": "Rhode Island",
+  "SC": "South Carolina",
+  "SD": "South Dakota",
+  "TN": "Tennessee",
+  "TX": "Texas",
+  "UT": "Utah",
+  "VT": "Vermont",
+  "VI": "Virgin Islands",
+  "VA": "Virginia",
+  "WA": "Washington",
+  "WV": "West Virginia",
+  "WI": "Wisconsin",
+  "WY": "Wyoming"
+}
+
+// listens for database updates in hometown
+exports.fixCity = functions.database.ref('USERS/{userID}/city').onWrite((change, context) => {
+  var userID = context.params.userID
+  var city = change.after.val()
+  console.log("Got city " + city)
+
+  if (city.includes(',')) {
+    console.log("Removing state")
+    return change.after.ref.set(city.substring(0, city.indexOf(',')))
+  }
+  else if (state.includes('.')) {
+    console.log("Removing periods")
+    return change.after.ref.set(city.split('.').join(''))
+  }
+  return 0
+})
+
+// listens for database updates in state
+exports.fixState = functions.database.ref('USERS/{userID}/stateCountry').onWrite((change, context) => {
+  var userID = context.params.userID
+  var state = change.after.val()
+  console.log("Got state " + state)
+
+  if(state.length > 2) {
+    for(key in states) {
+      if(states[key].toUpperCase() == state.toUpperCase()) {
+        console.log("New state " + key)
+        return change.after.ref.set(key)
+      }
+    }
+  }
+  return 0
+})
+
 // make all mate types advance to the next year
 // run https://us-central1-<PROJECT-ID>.cloudfunctions.net/classUpdate?key=<YOUR-KEY>
 exports.classUpdate = functions.https.onRequest((req, res) => {
   const key = req.query.key
 
-  if(key != functions.config().cron.key) {
+  if (key != functions.config().cron.key) {
     console.log('Invalid key')
     res.status(403).send('Security key does not match!')
     return null
@@ -64,11 +160,11 @@ exports.classUpdate = functions.https.onRequest((req, res) => {
 
   const getUsersPromise = admin.database().ref(`USERS/`).once('value')
   return Promise.all([getUsersPromise]).then(results => {
-    results[0].forEach(function(child) {
+    results[0].forEach(function (child) {
       var key = child.key
       var user = child.val()
       var currentClass = user.mateType
-      switch(currentClass) {
+      switch (currentClass) {
         case 'Freshman':
           user.mateType = 'Sophomore'
           console.log('Updating Freshman to Sophomore for' + key)
